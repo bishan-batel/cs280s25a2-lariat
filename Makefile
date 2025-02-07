@@ -1,6 +1,6 @@
 PRG=gnu.exe
 GCC=g++
-GCCFLAGS=-Wall -Werror -Wextra -std=c++17 -pedantic -Wconversion -O2 -Wno-unused-result
+GCCFLAGS=-Wall -Werror -Wextra -std=c++17 -pedantic -Wconversion -O2 -Wno-unused-result -g
 
 OBJECTS0=
 DRIVER0=driver.cpp

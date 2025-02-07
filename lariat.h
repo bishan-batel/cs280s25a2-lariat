@@ -91,6 +91,15 @@ public:
   LariatException(int ErrCode, const std::string& Description):
       m_ErrCode(ErrCode), m_Description(Description) {}
 
+  LariatException(int ErrCode): m_ErrCode(ErrCode), m_Description{} {
+    switch (ErrCode) {
+      case E_NO_MEMORY: m_Description = "E_NO_MEMORY"; break;
+      case E_BAD_INDEX: m_Description = "Subscript is out of range"; break;
+      case E_DATA_ERROR: m_Description = "Data Error"; break;
+      default: break;
+    }
+  }
+
   virtual int code(void) const { return m_ErrCode; }
 
   virtual const char* what(void) const throw() { return m_Description.c_str(); }
@@ -105,43 +114,62 @@ public:
 };
 
 // forward declaration for 1-1 operator<<
-template<typename T, int Size>
+template<typename T, usize Size>
 class Lariat;
 
-template<typename T, int Size>
+template<typename T, usize Size>
 std::ostream& operator<<(std::ostream& os, const Lariat<T, Size>& rhs);
 
-template<typename T, int Size>
+template<typename T, usize Size>
 class Lariat {
 public:
 
-  Lariat();                  // default constructor
-  Lariat(const Lariat& rhs); // copy constructor
-  ~Lariat();                 // destructor
-  // more ctor(s) and assignment(s)
+  template<typename S, usize OtherSize>
+  friend class Lariat;
 
-  void insert(int index, const T& value);
-  void push_back(const T& value);
-  void push_front(const T& value);
+  Lariat();
+  Lariat(const Lariat& rhs);
 
-  void erase(int index);
-  void pop_back();
-  void pop_front();
+  template<typename S, usize OtherSize>
+  Lariat(const Lariat<S, OtherSize>& rhs);
 
-  T& operator[](int index);
+  Lariat(Lariat&&) = delete;
 
-  const T& operator[](int index) const;
+  ~Lariat();
 
-  T& first();
+  auto operator=(const Lariat& rhs) -> Lariat&;
 
-  const T& first() const;
+  template<typename S, usize OtherSize>
+  auto operator=(const Lariat<S, OtherSize>& rhs) -> Lariat&;
 
-  T& last();
+  auto operator=(Lariat&&) -> Lariat& = delete;
 
-  const T& last() const;
+  auto insert(int index_signed, const T& value) -> void;
+
+  auto push_back(const T& value) -> void;
+
+  auto push_front(const T& value) -> void;
+
+  auto erase(int index_signed) -> void;
+
+  auto pop_back() -> void;
+
+  auto pop_front() -> void;
+
+  [[nodiscard]] auto operator[](int index_signed) -> T&;
+
+  [[nodiscard]] auto operator[](int index_signed) const -> const T&;
+
+  [[nodiscard]] auto first() -> T&;
+
+  [[nodiscard]] auto first() const -> const T&;
+
+  [[nodiscard]] auto last() -> T&;
+
+  [[nodiscard]] auto last() const -> const T&;
 
   // returns index, size (one past last) if not found
-  unsigned find(const T& value) const;
+  [[nodiscard]] auto find(const T& value) const -> u32;
 
   friend std::ostream& operator<< <T, Size>(
     std::ostream& os,
@@ -149,11 +177,13 @@ public:
   );
 
   // and some more
-  size_t size(void) const; // total number of items (not nodes)
-  void clear();            // make it empty
+  [[nodiscard]] auto size(void) const
+    -> usize;           // total number of items (not nodes)
+
+  auto clear() -> void; // make it empty
 
   // push data in front reusing empty positions and delete remaining nodes
-  void compact();
+  auto compact() -> void;
 
 private:
 
@@ -162,25 +192,39 @@ private:
     LNode* prev = nullptr;
 
     // number of items currently in the node
-    int count = 0;
+    usize count = 0;
+
+    auto is_full() const -> bool;
 
     T values[Size];
   };
 
   struct FindResult {
-    LNode* node;
+    LNode& node{nullptr};
     usize index{0};
   };
 
-  FindResult find_element(usize i);
+  [[nodiscard]] auto make_node(LNode* prev = nullptr, LNode* next = nullptr)
+    const -> LNode*;
+
+  auto shift_up(LNode& node, usize index) -> void;
+
+  auto shift_down(LNode& node, usize index) -> void;
+
+  auto split(LNode& node) -> void;
+
+  [[nodiscard]] auto find_element(usize i) const -> FindResult;
 
   // DO NOT modify provided code
-  LNode* head_;           // points to the first node
-  LNode* tail_;           // points to the last node
-  int size_;              // the number of items (not nodes) in the list
-  mutable int nodecount_; // the number of nodes in the list
-  int asize_;             // the size of the array within the nodes
+  LNode* head_{nullptr};       // points to the first node
+  LNode* tail_{nullptr};       // points to the last node
+  usize size_{0};              // the number of items (not nodes) in the list
+  mutable usize nodecount_{0}; // the number of nodes in the list
+  usize asize_{0};             // the size of the array within the nodes
 };
+
+template<typename T>
+auto swap(T& lhs, T& rhs) -> void;
 
 #ifndef LARIAT_CPP
   #include "lariat.cpp"
