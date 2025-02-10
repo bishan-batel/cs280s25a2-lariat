@@ -120,6 +120,9 @@ class Lariat;
 template<typename T, usize Size>
 std::ostream& operator<<(std::ostream& os, const Lariat<T, Size>& rhs);
 
+/**
+ * @brief Rope Data structure
+ */
 template<typename T, usize Size>
 class Lariat {
 public:
@@ -127,45 +130,116 @@ public:
   template<typename S, usize OtherSize>
   friend class Lariat;
 
+  /**
+   * @brief Default constructor
+   */
   Lariat();
+
+  /**
+   * @brief Copy constructor
+   */
   Lariat(const Lariat& rhs);
 
+  /**
+   * @brief Copy constructor from another lariat type
+   *
+   * @tparam S Other type that can be casted to T
+   * @param rhs other instance of a lariat type
+   */
   template<typename S, usize OtherSize>
   Lariat(const Lariat<S, OtherSize>& rhs);
 
   Lariat(Lariat&&) = delete;
 
+  /**
+   * @brief Destructor
+   */
   ~Lariat();
 
+  /**
+   * @brief Copy assignment
+   */
   auto operator=(const Lariat& rhs) -> Lariat&;
 
+  /**
+   * @brief Copy assignment
+   */
   template<typename S, usize OtherSize>
   auto operator=(const Lariat<S, OtherSize>& rhs) -> Lariat&;
 
   auto operator=(Lariat&&) -> Lariat& = delete;
 
+  /**
+   * @brief Insert a value into the given index
+   *
+   * @param index_signed signed index, this should be unsigned but I can't
+   * change the interface
+   * @param value Value to insert
+   */
   auto insert(int index_signed, const T& value) -> void;
 
+  /**
+   * @brief Pushes a value to the end of the list
+   */
   auto push_back(const T& value) -> void;
 
+  /**
+   * @brief Pushes a value to the beginning of the list
+   */
   auto push_front(const T& value) -> void;
 
+  /**
+   * @brief Erases value at the given index
+   *
+   * @param index_signed signed index, this should be unsigned but I can't
+   * change the interface
+   */
   auto erase(int index_signed) -> void;
 
+  /**
+   * @brief Removes a value from the end of the list
+   */
   auto pop_back() -> void;
 
+  /**
+   * @brief Removes a value from the beginning of the list
+   */
   auto pop_front() -> void;
 
+  /**
+   * @brief Gives the value at the given index
+   *
+   * @param index_signed signed index, this should be unsigned but I can't
+   * change the interface
+   */
   [[nodiscard]] auto operator[](int index_signed) -> T&;
 
+  /**
+   * @brief Gives the value at the given index
+   *
+   * @param index_signed signed index, this should be unsigned but I can't
+   * change the interface
+   */
   [[nodiscard]] auto operator[](int index_signed) const -> const T&;
 
+  /**
+   * @brief Gets the first element of the list, throws if empty
+   */
   [[nodiscard]] auto first() -> T&;
 
+  /**
+   * @brief Gets the first element of the list, throws if empty
+   */
   [[nodiscard]] auto first() const -> const T&;
 
+  /**
+   * @brief Gets the last element of the list, throws if empty
+   */
   [[nodiscard]] auto last() -> T&;
 
+  /**
+   * @brief Gets the last element of the list, throws if empty
+   */
   [[nodiscard]] auto last() const -> const T&;
 
   // returns index, size (one past last) if not found
@@ -176,18 +250,28 @@ public:
     const Lariat<T, Size>& list
   );
 
-  // and some more
-  [[nodiscard]] auto size(void) const
-    -> usize;           // total number of items (not nodes)
+  /**
+   * @brief Returns the size of this list
+   */
+  [[nodiscard]] auto size(void) const -> usize;
 
+  /**
+   * @brief Clears this list
+   */
   auto clear() -> void; // make it empty
 
-  // push data in front reusing empty positions and delete remaining nodes
+  /**
+   * @Brief Pushes data in front reusing empty positions and delete remaining
+   * nodes
+   */
   auto compact() -> void;
 
 private:
 
-  struct LNode { // DO NOT modify provided code
+  /**
+   * @brief Individual node in the structure
+   */
+  struct LNode {
     LNode* next = nullptr;
     LNode* prev = nullptr;
 
@@ -199,30 +283,71 @@ private:
     T values[Size];
   };
 
+  /**
+   * @brief Result given with find_element
+   */
   struct FindResult {
     LNode& node{nullptr};
     usize index{0};
   };
 
+  /**
+   * @brief Factory method for LNode
+   */
   [[nodiscard]] auto make_node(LNode* prev = nullptr, LNode* next = nullptr)
     const -> LNode*;
 
+  /**
+   * @brief Shifts all elemenets in the node up , starting at the given index
+   */
   auto shift_up(LNode& node, usize index) -> void;
 
+  /**
+   * @brief Shifts all elements in the node down , starting at the given index
+   */
   auto shift_down(LNode& node, usize index) -> void;
 
+  /**
+   * @brief Splits node into 2 roughly equal sized nodes
+   */
   auto split(LNode& node) -> void;
 
+  /**
+   * @brief Locates the element with the given global index
+   *
+   * @param i Global index into this list
+   */
   [[nodiscard]] auto find_element(usize i) const -> FindResult;
 
-  // DO NOT modify provided code
-  LNode* head_{nullptr};       // points to the first node
-  LNode* tail_{nullptr};       // points to the last node
-  usize size_{0};              // the number of items (not nodes) in the list
-  mutable usize nodecount_{0}; // the number of nodes in the list
-  usize asize_{0};             // the size of the array within the nodes
+  /**
+   * @brief Points to the first node
+   */
+  LNode* head_{nullptr};
+
+  /**
+   * @brief Points to the last node
+   */
+  LNode* tail_{nullptr};
+
+  /**
+   * @brief The number of items (not nodes) in the list
+   */
+  usize size_{0};
+
+  /**
+   * @brief // the number of nodes in the list
+   */
+  mutable usize nodecount_{0};
+
+  /**
+   * @brief The size of the array within the nodes
+   */
+  usize asize_{0};
 };
 
+/**
+ * @brief Generic swap function
+ */
 template<typename T>
 auto swap(T& lhs, T& rhs) -> void;
 

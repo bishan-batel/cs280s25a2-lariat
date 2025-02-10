@@ -318,6 +318,7 @@ auto Lariat<T, Size>::compact() -> void {
       tail_->prev->next = tail_;
     }
     delete[] tail_;
+    nodecount_--;
 
     tail_ = temp;
   }
