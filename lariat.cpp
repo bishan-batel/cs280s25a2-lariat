@@ -132,6 +132,7 @@ auto Lariat<T, Size>::insert(const int index_signed, const T& value) -> void {
   split(*node);
 
   node->next->values[node->next->count - 1] = overflow;
+  size_++;
 }
 
 template<typename T, usize Size>
@@ -163,8 +164,8 @@ auto Lariat<T, Size>::push_front(const T& value) -> void {
 
   head_->values[head_->count] = value;
   head_->count++;
-  size_++;
   shift_up(*head_, 0);
+  size_++;
 }
 
 template<typename T, usize Size>
@@ -189,6 +190,7 @@ auto Lariat<T, Size>::erase(const int index_signed) -> void {
 
   shift_down(node, local_index);
   node.count--;
+  size_--;
 }
 
 template<typename T, usize Size>
@@ -196,13 +198,20 @@ auto Lariat<T, Size>::pop_back() -> void {
   if (size() == 0) {
     throw LariatException{LariatException::E_BAD_INDEX};
   }
-  tail_->count--;
+
+  LNode* last = tail_;
+  while (last->count == 0) {
+    last = last->prev;
+  }
+  last->count--;
+  size_--;
 }
 
 template<typename T, usize Size>
 auto Lariat<T, Size>::pop_front() -> void {
   shift_down(*head_, 0);
   head_->count--;
+  size_--;
 }
 
 template<typename T, usize Size>
@@ -241,7 +250,12 @@ auto Lariat<T, Size>::last() -> T& {
     throw LariatException{LariatException::E_BAD_INDEX};
   }
 
-  return (*this)[size_ - 1];
+  LNode* node = tail_;
+  while (node->count == 0) {
+    node = node->prev;
+  }
+
+  return node->values[node->count - 1];
 }
 
 template<typename T, usize Size>
@@ -276,51 +290,71 @@ auto Lariat<T, Size>::size() const -> usize {
 
 template<typename T, usize Size>
 auto Lariat<T, Size>::compact() -> void {
-  LNode *dest{head_}, *src{};
-
-  if (dest) {
-    src = dest->next;
-  }
-
-  usize read_idx{0}, read_end{src->count};
-
-  while (dest and src) {
-    while (not dest->is_full() and read_idx != read_end) {
-      dest->values[dest->count] = src->values[read_idx];
-      dest->count++;
-      read_idx++;
-    }
-
-    if (read_idx == read_end) {
-      src = src->next;
-
-      if (not src) {
-        break;
-      }
-
-      read_idx = 0;
-      read_end = src->count;
-    }
-    if (dest->is_full()) {
-      dest = dest->next;
-    }
-  }
-
-  if (head_->count == 0) {
+  if (size() == 0) {
     clear();
     return;
   }
 
-  while (tail_ and tail_->count == 0) {
-    LNode* temp = tail_->prev;
+  // if only one node then this is compact
+  if (nodecount_ == 1) {
+    return;
+  }
 
-    if (tail_->prev) {
-      tail_->prev->next = tail_;
-    }
-    delete[] tail_;
+  if (size_ / Size >= nodecount_) {
+    return;
+  }
+
+  while (head_->count == 0) {
+    LNode* next = head_->next;
+
+    delete next;
     nodecount_--;
 
-    tail_ = temp;
+    head_ = next;
+  }
+  head_->prev = nullptr;
+
+  LNode* dest{head_};
+  LNode* src{dest ? dest->next : nullptr};
+
+  constexpr usize write_end{Size};
+  usize write_idx{dest->count};
+  usize read_idx{0}, read_end{src->count};
+
+  usize global_write_idx{head_->count};
+
+  while (dest and src and global_write_idx < size()) {
+    if (write_idx == write_end) {
+      write_idx = 0;
+      dest = dest->next;
+      continue;
+    }
+
+    if (read_idx == read_end) {
+      src = src->next;
+      if (not src) {
+        break;
+      }
+      read_idx = 0;
+      read_end = src->count;
+      continue;
+    }
+
+    dest->values[write_idx++] = src->values[read_idx++];
+    global_write_idx++;
+    dest->count++;
+    src->count--;
+  }
+
+  tail_ = dest;
+  LNode* delete_pos = tail_->next;
+  tail_->next = nullptr;
+
+  while (delete_pos) {
+    LNode* tmp = delete_pos->next;
+    nodecount_--;
+    delete delete_pos;
+    delete_pos = tmp;
   }
 }
 
@@ -393,7 +427,7 @@ auto Lariat<T, Size>::split(LNode& node) -> void {
   node.count -= next->count;
 
   // book keeping
-  if (tail_->next) {
+  while (tail_->next) {
     tail_ = tail_->next;
   }
 }
